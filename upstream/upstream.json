@@ -1,0 +1,92 @@
+{
+  "_comment": [
+    "Merge base for the vanilla layouts this mod overrides.",
+    "",
+    "upstream/ holds a pure vanilla copy of each file as it stood at the recorded game",
+    "build. panorama/layout/ holds our hand-merged copy. A three-way merge is:",
+    "  ours        = panorama/layout/<file>.xml",
+    "  base        = upstream/<file>.xml",
+    "  theirs      = the file as it exists in the NEW game build",
+    "",
+    "If a file in upstream/ no longer matches the game, refresh it BEFORE merging, or",
+    "the diff will show the game's own changes as ours and produce a silent revert.",
+    "Run tools/extract_vanilla.py first, then confirm by hand.",
+    "",
+    "recordedBuild was the buildid from appmanifest_1422450.acf at the time these were",
+    "taken. Note that on 2026-10-08 that build had a pending update",
+    "(TargetBuildID 25789635, BytesToDownload 45616352), so treat the pending flag as",
+    "meaning 'update the game, then re-check'."
+  ],
+  "recordedBuild": "25763945",
+  "targetBuildId": "25789635",
+  "updatePending": true,
+  "source": "SteamTracking/GameTracking-Deadlock, game/citadel/pak01_dir/panorama/layout/",
+  "files": [
+    {
+      "ours": "panorama/layout/citadel_db_page_profile.xml",
+      "base": "upstream/citadel_db_page_profile.xml",
+      "rootPanel": "CitadelProfilePage",
+      "vanillaRequiredChildren": [
+        "StatsContent",
+        "StatsLeft",
+        "HeroList",
+        "GamesPlayedContainer",
+        "GamesWonContainer",
+        "LastHitsContainer",
+        "DeniesContainer",
+        "CommendsContainer"
+      ],
+      "vanillaOptionalChildren": [
+        "MatchHistoryArea",
+        "FriendID"
+      ],
+      "addedByUs": [
+        "PM_ProfileButton",
+        "PMButtonUnderline",
+        "PMButtonLabel"
+      ],
+      "modifiedByUs": [
+        "oncancel: CitadelNavigateBack() -> PMOnCancel()"
+      ],
+      "hostRole": "entry point A: match list + career, hands off to the post-game page",
+      "dataSources": [
+        "{d:player_stats_state}",
+        "{d:match_history_state}"
+      ]
+    },
+    {
+      "ours": "panorama/layout/post_game/citadel_db_page_post_game_new.xml",
+      "base": "upstream/citadel_db_page_post_game_new.xml",
+      "rootPanel": "CitadelPostGameNew",
+      "vanillaRequiredChildren": [
+        "ScreensCarousel",
+        "Team1Screen",
+        "Team2Screen",
+        "ScoreboardScreen",
+        "GraphsScreen",
+        "CarouselNavLeftArrow",
+        "CarouselNavRightArrow",
+        "CarouselNavItems",
+        "PlayAgainButton",
+        "ReplayButton",
+        "CommendNotification"
+      ],
+      "vanillaOptionalChildren": [
+        "MVPScreen"
+      ],
+      "addedByUs": [
+        "PM_PostGameButton",
+        "PMButtonUnderline",
+        "PMButtonLabel"
+      ],
+      "modifiedByUs": [
+        "oncancel: CitadelNavigateBack() -> PMOnCancel()"
+      ],
+      "hostRole": "entry point B: breakdown of whichever match is open",
+      "dataSources": [
+        "{d:match_load_state}",
+        "CitadelPostGameScoreboardNew"
+      ]
+    }
+  ]
+}

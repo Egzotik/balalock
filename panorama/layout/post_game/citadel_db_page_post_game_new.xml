@@ -1,0 +1,153 @@
+<!--
+  POSTMORTEM — override of panorama/layout/post_game/citadel_db_page_post_game_new.xml
+
+  WHY THIS FILE EXISTS
+  The post-game page hides the global dashboard footer bar (its dashboardclass is
+  "isShowingPostGamePage NoFooterBar"), and entry point A lives on the home page, which
+  is not on screen during a match. So without this file there would be no way to reach
+  the report right after a game finished. This override adds the second entry point: a
+  button next to REPLAY that opens the same POSTMORTEM overlay.
+
+  NOTE ON MVPScreen
+  The shipped citadel_db_page_post_game_new.vcss still carries an #MVPScreen rule, but
+  the layout in build 25763945 has four carousel screens and no MVP panel, and a scan
+  of the installed pak01_dir.vpk finds no MVPScreen string either. So this copy has four
+  screens, matching the installed build. pm_compat.js reports MVPScreen as an optional
+  probe: if a future patch ADDS it back, our override would hit
+  "FATAL ERROR: Unable to find child 'MVPScreen'" and that probe is the tell.
+
+  MERGE BASE
+  Deadlock, game build 25763945 (appmanifest 1422450).
+  Pure vanilla + two additions. See docs/COMPAT.md before every release.
+
+  HARD RULES — breaking either one crashes the post-game page
+
+  1. ADD ONLY. Never remove or rename a vanilla child. The known
+     "FATAL ERROR: Unable to find child 'Team1Screen'" class of crash comes from mods
+     that strip children the C++ side looks up by name. We keep 100% of the vanilla
+     tree, including the MoviePanel line inside PlayAgainButton.
+  2. Keep the _c suffix on every <include>. The game only resolves compiled asset
+     names, so an include without _c fails to load and the panel renders unstyled.
+
+  Includes added by this mod:
+     styles  -> pm_button.vcss_c, pm_root.vcss_c
+     scripts -> pm_compat, pm_data, pm_net, pm_probe, pm_core (.vjs_c)
+
+  pm_root.vcss is needed HERE, not inside the overlay, because the overlay is built at
+  runtime with $.CreatePanel in THIS file's XML context. Panels created in a context
+  only see the stylesheets that context includes.
+
+  oncancel was repointed from CitadelNavigateBack() to PMOnCancel(). Behaviour is a
+  superset of vanilla: with the overlay closed PMOnCancel calls CitadelNavigateBack(),
+  and with it open ESC closes the overlay instead of navigating away from under it.
+-->
+<root>
+	<styles>
+		<include src="s2r://panorama/styles/citadel_base_styles.vcss_c" />
+		<include src="s2r://panorama/styles/citadel_db_page_shared.vcss_c" />
+		<include src="s2r://panorama/styles/post_game/citadel_db_page_post_game_new.vcss_c" />
+		<include src="s2r://panorama/styles/loading_screen.vcss_c" />
+		<include src="s2r://panorama/styles/postmortem/pm_button.vcss_c" />
+		<include src="s2r://panorama/styles/postmortem/pm_root.vcss_c" />
+	</styles>
+	<scripts>
+		<include src="s2r://panorama/scripts/post_game/citadel_db_page_post_game_new.vts_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_text.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_analysis.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_compat.vjs_c" />
+
+		<include src="s2r://panorama/scripts/postmortem/pm_data.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_net.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_probe.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_core.vjs_c" />
+	</scripts>
+	<snippets>
+		<snippet name="CarouselNavItem">
+			<Panel class="CarouselNavItem">
+				<Panel class="Icon" />
+				<Label text="{s:nav_text}" />
+			</Panel>
+		</snippet>
+	</snippets>
+	<CitadelPostGameNew class="DashboardPage" oncancel="PMOnCancel();" dashboardclass="isShowingPostGamePage NoFooterBar" rendergame="false">
+		<AsyncDataPanel class="Body" state="{d:match_load_state}">
+			<Panel class="AsyncSuccessContainer">
+				<Carousel id="ScreensCarousel" panels-visible="3">
+					<Panel id="Team1Screen" class="Team PostGameScreen" acceptsfocus="true" navclass="Team1" navtooltip="#Citadel_Team1_Name">
+						<Panel class="ScoreboardBackground" />
+						<Label class="MatchMode" text="{s:match_mode}" />
+						<Label id="MatchID" text="#Citadel_MatchDetails_MatchID" onmouseover="UIShowTextTooltip( #Citadel_PostGame_CopyMatchID )" onmouseout="UIHideTextTooltip()" onactivate="CitadelPostGameCopyMatchID()" />
+						<CitadelPostGameTeam id="Team1" />
+					</Panel>
+					<Panel id="Team2Screen" class="Team PostGameScreen" acceptsfocus="true" navclass="Team2" navtooltip="#Citadel_Team2_Name">
+						<Panel class="ScoreboardBackground" />
+						<Label class="MatchMode" text="{s:match_mode}" />
+						<Label id="MatchID" text="#Citadel_MatchDetails_MatchID" onmouseover="UIShowTextTooltip( #Citadel_PostGame_CopyMatchID )" onmouseout="UIHideTextTooltip()" onactivate="CitadelPostGameCopyMatchID()" />
+						<CitadelPostGameTeam id="Team2" />
+					</Panel>
+					<Panel id="ScoreboardScreen" class="PostGameScreen Scoreboard" navclass="Scoreboard" navtooltip="#Citadel_Post_Game_Scoreboard">
+						<Panel class="ScoreboardBackground" />
+						<Label class="MatchMode" text="{s:match_mode}" />
+						<Label id="MatchID" text="#Citadel_MatchDetails_MatchID" onmouseover="UIShowTextTooltip( #Citadel_PostGame_CopyMatchID )" onmouseout="UIHideTextTooltip()" onactivate="CitadelPostGameCopyMatchID()" />
+						<CitadelPostGameScoreboardNew id="Scoreboard" acceptsfocus="true" />
+					</Panel>
+					<Panel id="GraphsScreen" class="PostGameScreen Graphs" navclass="Graphs" navtooltip="#Citadel_Post_Game_Graphs_New">
+						<Panel class="ScoreboardBackground" />
+						<Label class="MatchMode" text="{s:match_mode}" />
+						<Label id="MatchID" text="#Citadel_MatchDetails_MatchID" onmouseover="UIShowTextTooltip( #Citadel_PostGame_CopyMatchID )" onmouseout="UIHideTextTooltip()" onactivate="CitadelPostGameCopyMatchID()" />
+						<MatchDetailsGraphs id="Graphs" class="DontShowSwitchPage" acceptsfocus="true" />
+					</Panel>
+				</Carousel>
+				<Panel class="FooterBar" hittest="false">
+					<Panel class="FooterBarBL">
+						<CitadelBindingButton action="MenuBack" onactivate="CitadelNavigateBack()" text="#menu_exit_db_page" />
+					</Panel>
+					<Panel class="FooterBarMid" hittest="false">
+						<Panel class="CarouselNav">
+							<Button id="CarouselNavLeftArrow" class="CarouselNavArrow" onactivate="CitadelPostGameIncrementScreen( -1 )">
+								<Panel class="NavArrowIcon" />
+							</Button>
+							<Panel id="CarouselNavItems" />
+							<Button id="CarouselNavRightArrow" class="CarouselNavArrow" onactivate="CitadelPostGameIncrementScreen( 1 )">
+								<Panel class="NavArrowIcon" />
+							</Button>
+						</Panel>
+						<Panel id="PlayAgainButton" hittest="false">
+							<MoviePanel id="PlayButtonFX" class="btn_fx" src="file://{resources}/videos/pick_screen/play_btn_grn_flame.webm" scaling="stretch" repeat="true" disableaudio="true" autoplay="onload" hittest="false" />
+							<Panel class="buttonContent" onactivate="CitadelPostGamePlayAgain()">
+								<Panel class="btn_bg" />
+								<Panel class="btn_texture" />
+								<SplitLabel text="#Citadel_Post_Game_Requeue" />
+							</Panel>
+						</Panel>
+					</Panel>
+					<Panel class="FooterBarBR">
+						<MatchDetailsReplayButton id="ReplayButton" />
+						<!-- POSTMORTEM addition: opens the overlay, see pm_core.js PMOpenOverlay(). -->
+						<Button id="PM_PostGameButton" class="PMButton" onactivate="PMOpenOverlay();" onmouseover="UIShowTextTooltip( &quot;Post-match breakdown against the lobby&quot; );" onmouseout="UIHideTextTooltip();">
+							<Panel class="PMButtonUnderline" />
+							<Label class="PMButtonLabel" text="POSTMORTEM" />
+						</Button>
+					</Panel>
+				</Panel>
+			</Panel>
+			<Panel class="AsyncFailureContainer">
+				<Panel class="ErrorContents">
+					<Label class="ErrorMsg" text="{s:match_load_error}" />
+					<Button id="RetryButton" class="PopupButton" onactivate="CitadelMatchDetailsRetry()">
+						<Label text="#Citadel_Post_Game_Retry" />
+					</Button>
+				</Panel>
+			</Panel>
+			<Panel class="AsyncLoadingContainer">
+				<Panel class="LoadingDetails">
+					<Panel class="SpinnerContainer">
+						<Panel class="SpinnerOuter" />
+						<Panel class="SpinnerInner" />
+					</Panel>
+				</Panel>
+			</Panel>
+		</AsyncDataPanel>
+		<CitadelCommendNotification id="CommendNotification" />
+	</CitadelPostGameNew>
+</root>

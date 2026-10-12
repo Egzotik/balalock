@@ -1,0 +1,105 @@
+/*
+ * pm_button.vcss — POSTMORTEM entry button, shared by both hosts.
+ *
+ * Two hosts use it:
+ *   citadel_dashboard_footer_bar.xml      -> #PM_FooterButton
+ *   post_game/citadel_db_page_post_game_new.xml -> #PM_PostGameButton
+ *
+ * Visual language is borrowed from the vanilla footer so the button does not look
+ * foreign:
+ *   .FooterCommand  opacity 0.2, brightness 2.0 on hover, 28px tall
+ *   .FooterCommandLabel  font-size 20px, color offWhite&88, font-family block,
+ *                        text-transform uppercase
+ *
+ * Two deliberate differences, because a 0.2-opacity hint would be too easy to miss:
+ *   - higher resting opacity (0.55) and a coloured underline
+ *   - the post-game variant gets a real margin so it does not collide with
+ *     #ReplayButton, whose vanilla rule is margin: 0px 8px 12px 0px
+ *
+ * Placement note for the post-game footer: .FooterBarBR is flow-children: right, so
+ * this button renders to the LEFT of the replay button, not under it.
+ */
+
+.PMButton
+{
+	vertical-align: middle;
+	horizontal-align: middle;
+	height: 28px;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin: 0px 0px 0px 6px;
+	border-radius: 4px;
+	background-color: rgba( 240, 233, 231, 0.1 );
+	opacity: 0.55;
+	transition-property: brightness, opacity;
+	transition-timing-function: ease-in-out;
+	transition-duration: 0.10s;
+	z-index: 100;
+}
+
+.PMButton:hover
+{
+	opacity: 1.0;
+	brightness: 2.0;
+}
+
+.PMButton:active
+{
+	opacity: 0.85;
+}
+
+.PMButtonLabel
+{
+	vertical-align: middle;
+	horizontal-align: middle;
+	margin-left: 4px;
+	font-size: 20px;
+	color: offWhite&88;
+	font-family: block;
+	font-weight: semi-bold;
+	text-transform: uppercase;
+	text-overflow: shrink;
+	letter-spacing: 1px;
+}
+
+/* The accent underline is what makes the button findable without shouting. */
+.PMButton .PMButtonUnderline
+{
+	vertical-align: bottom;
+	horizontal-align: center;
+	width: 100%;
+	height: 2px;
+	background-color: #FF9900;
+	opacity: 0.0;
+	transition-property: opacity;
+	transition-duration: 0.10s;
+}
+
+.PMButton:hover .PMButtonUnderline
+{
+	opacity: 1.0;
+}
+
+/*
+ * Post-game host: sit next to REPLAY without touching it.
+ *
+ * The button is ALWAYS at full resting opacity. An earlier version tied it to
+ * .ProgressState_None / .ProgressState_Completed, because that is when the vanilla
+ * post-game footer fades itself in. That made the button's visibility depend on a class
+ * name Valve can rename in any patch, which is a second way for the mod to vanish
+ * without saying why. The footer's own fade still applies to its background; ours does
+ * not.
+ */
+.FooterBarBR #PM_PostGameButton
+{
+	margin: 0px 12px 12px 8px;
+	opacity: 0.55;
+	transition-property: opacity;
+	transition-duration: 0.25s;
+}
+
+/* Dashboard footer host: the panel collapses the button until pm_core.js is ready. */
+#CenterRightCommandPanel #PM_FooterButton
+{
+	margin: 0px;
+}

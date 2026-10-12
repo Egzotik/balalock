@@ -1,0 +1,12 @@
+﻿# build output
+build/*
+!build/pak01_dir.vpk
+*.vpk
+!build/pak01_dir.vpk
+
+# CSDK staging is outside the repo, but keep the marker anyway
+/_pack/
+
+# editor noise
+.vs/
+*.user

@@ -1,0 +1,1019 @@
+/*
+ * pm_root.vcss — POSTMORTEM overlay.
+ *
+ * The overlay is built at runtime with $.CreatePanel in a host file's XML context, so
+ * this stylesheet has to be included by BOTH hosts. Panels only see the stylesheets
+ * their own context includes; a stylesheet included only by pm_root.xml would leave
+ * the overlay completely unstyled.
+ *
+ * Layout is deliberately plain: fixed full-screen backdrop, a centred column, and a
+ * scrollable body. Panorama has no flexbox, so sizing is done with width: fill-parent
+ * and explicit heights.
+ */
+
+/*
+ * Geometry is set from JS, not CSS.
+ *
+ * Build 2 shipped this block with `width: 100%; height: 100%` plus a
+ * `visibility: collapse` default and an inline override in pm_core.js. In game the
+ * overlay was created, opened, and closed on ESC, and drew nothing: `100%` needs a
+ * sized parent, and a DashboardPage root has no size yet when its layout script runs,
+ * so the overlay resolved to 0x0. Worse, the "is it visible" answer then lived in two
+ * places at once - a stylesheet default and an inline property - and the object looked
+ * healthy at every JS-level check.
+ *
+ * So: pm_core.js measures the host and writes explicit pixels, and this block sets no
+ * geometry and no visibility at all. The overlay is visible by default and is hidden
+ * ONLY by an explicit inline `visibility: collapse`, which makes "invisible" a
+ * deliberate act rather than a default.
+ */
+/*
+ * Two sizing mechanisms on purpose, not one.
+ *
+ *   this block          -> relative baseline, width/height 100% of the parent
+ *   pm_core.js          -> explicit pixels measured from a sized ancestor
+ *
+ * Build 5 had only the JS path and the button did nothing when pressed, because
+ * pm_core.js read a size, got nothing usable, and then wrote NO size at all - the
+ * overlay was a panel with zero extent. Removing the CSS baseline made that failure
+ * total instead of partial. Keeping both means a broken measurement degrades to
+ * relative sizing instead of to nothing.
+ */
+#PMOverlay
+{
+	width: 100%;
+	height: 100%;
+	flow-children: none;
+}
+
+/*
+ * Opaque, not tinted.
+ *
+ * At 0.85 the post-game screen underneath stayed legible and the two sets of text were
+ * read on top of each other. A report you cannot read is worse than no report, so this
+ * goes to fully opaque and the frame carries its own surface instead.
+ */
+#PMBackdrop
+{
+	width: 100%;
+	height: 100%;
+	background-color: #06080A;
+	visibility: visible;
+}
+
+/* The backdrop swallows clicks so a stray click cannot fall through to whatever the
+ * dashboard has underneath. Its onactivate is set from JS to a no-op on purpose:
+ * consuming the event is the point. Sized and coloured in the #PMOverlay block above. */
+
+#PMFrame
+{
+	horizontal-align: center;
+	vertical-align: middle;
+	width: 92%;
+	height: 92%;
+	flow-children: down;
+	background-color: #10130D;
+	border: 1px solid offWhite&22;
+	border-radius: 8px;
+}
+
+#PMHeader
+{
+	width: 100%;
+	height: 52px;
+	flow-children: right;
+	background-color: offWhite&08;
+	border-bottom: 1px solid offWhite&18;
+}
+
+#PMTitleLabel
+{
+	vertical-align: middle;
+	margin-left: 24px;
+	font-size: 30px;
+	font-family: block;
+	font-weight: semi-bold;
+	letter-spacing: 3px;
+	color: offWhite&DD;
+	text-transform: uppercase;
+}
+
+#PMSubtitleLabel
+{
+	vertical-align: middle;
+	margin-left: 16px;
+	font-size: 20px;
+	font-family: block;
+	color: offWhite&66;
+}
+
+#PMSpacer
+{
+	width: fill-parent-flow( 1.0 );
+	height: 1px;
+}
+
+/* Right-hand cluster in the header: source badge + close. */
+#PMHeaderRight
+{
+	vertical-align: middle;
+	margin-right: 16px;
+	flow-children: right;
+}
+
+#PMSourceBadge
+{
+	vertical-align: middle;
+	margin-right: 16px;
+	padding-left: 10px;
+	padding-right: 10px;
+	height: 26px;
+	border-radius: 4px;
+	background-color: offWhite&14;
+}
+
+#PMSourceBadgeLabel
+{
+	vertical-align: middle;
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&AA;
+	text-transform: uppercase;
+}
+
+/* Close mirrors the vanilla control hint: an ESC glyph plus a word. */
+#PMCloseButton
+{
+	vertical-align: middle;
+	height: 28px;
+	padding-left: 12px;
+	padding-right: 12px;
+	border-radius: 4px;
+	background-color: rgba( 240, 233, 231, 0.1 );
+	opacity: 0.7;
+}
+
+#PMCloseButton:hover
+{
+	opacity: 1.0;
+	brightness: 2.0;
+}
+
+#PMCloseButtonLabel
+{
+	vertical-align: middle;
+	margin-left: 8px;
+	font-size: 20px;
+	font-family: block;
+	color: offWhite&CC;
+	text-transform: uppercase;
+}
+
+/*
+ * The body is the only element allowed to grow past the frame, and it scrolls on the
+ * wheel.
+ *
+ * "squish" is the vanilla post-game scroll pattern, not decoration. hittest is set from
+ * JS as well, because a wheel event only reaches a panel that is hit-testable and this
+ * one is created rather than declared.
+ */
+#PMBody
+{
+	width: 100%;
+	height: fill-parent-flow( 1.0 );
+	overflow: scroll squish;
+	flow-children: down;
+}
+
+/*
+ * width:100% plus horizontal margins is an overflow, not a layout.
+ *
+ * 100% is 100% of the parent's CONTENT box; the margins are added afterwards. Every
+ * block below was 48px wider than the frame it sat in, which is what produced the
+ * horizontal scrollbar and the clipped right-hand column. fill-parent-flow(1.0) is the
+ * Panorama idiom that subtracts the margin first, so the block ends flush with the
+ * parent's right edge.
+ */
+#PMSection
+{
+	width: fill-parent-flow( 1.0 );
+	margin-top: 18px;
+	margin-bottom: 6px;
+	margin-left: 24px;
+	margin-right: 24px;
+	flow-children: down;
+}
+
+#PMSectionTitle
+{
+	font-size: 22px;
+	font-family: block;
+	font-weight: semi-bold;
+	color: offWhite&CC;
+	text-transform: uppercase;
+	letter-spacing: 2px;
+}
+
+#PMSectionRule
+{
+	height: 1px;
+	width: 100%;
+	margin-top: 4px;
+	margin-bottom: 8px;
+	background-color: offWhite&18;
+}
+
+/* Hero card, mirroring the layout of the original POSTMORTEM header strip. */
+#PMHeroCard
+{
+	width: 100%;
+	height: 96px;
+	flow-children: right;
+	background-color: offWhite&06;
+	border-radius: 4px;
+	padding: 8px;
+}
+
+#PMHeroMeta
+{
+	width: fill-parent-flow( 1.0 );
+	vertical-align: middle;
+	flow-children: down;
+	margin-left: 12px;
+}
+
+#PMHeroName
+{
+	font-size: 26px;
+	font-family: block;
+	font-weight: bold;
+	color: offWhite&EE;
+}
+
+#PMHeroKda
+{
+	font-size: 20px;
+	font-family: block;
+	color: offWhite&99;
+	margin-top: 2px;
+}
+
+#PMHeroLevel
+{
+	font-size: 20px;
+	font-family: block;
+	color: offWhite&99;
+}
+
+/* Four headline metric cards, the most prominent part of the screen. */
+#PMMetricRow
+{
+	width: 100%;
+	flow-children: right;
+	/* Six cards at fill-parent-flow(1.0) negotiate their shared space imperfectly and
+	 * the last one can land a pixel or two past the edge. A flat 16% each cannot. */
+}
+
+.PMMetricCard
+{
+	width: 16%;
+	height: 110px;
+	margin-right: 8px;
+	flow-children: down;
+	background-color: offWhite&06;
+	border-radius: 4px;
+	padding: 8px;
+}
+
+.PMMetricCard.warn
+{
+	border: 1px solid #FF9900;
+}
+
+.PMMetricName
+{
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&77;
+	text-transform: uppercase;
+}
+
+.PMMetricValue
+{
+	font-size: 34px;
+	font-family: block;
+	font-weight: bold;
+	color: offWhite&EE;
+	margin-top: 2px;
+}
+
+.PMMetricLobby
+{
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&66;
+}
+
+.PMMetricRank
+{
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&99;
+}
+
+/* The written breakdown, the part that actually tells you what went wrong. */
+#PMBreakdownHeadline
+{
+	width: 100%;
+	margin-top: 6px;
+	margin-bottom: 6px;
+	font-size: 22px;
+	font-family: block;
+	color: #FF9900;
+}
+
+#PMBreakdownRow
+{
+	width: 100%;
+	flow-children: down;
+}
+
+.PMBreakdownLine
+{
+	width: 100%;
+	margin-top: 3px;
+	font-size: 19px;
+	font-family: block;
+	color: offWhite&BB;
+}
+
+/* Dense tables: lobby-by-damage, stat line vs lobby, itemization. */
+#PMTableHeader
+{
+	width: 100%;
+	height: 28px;
+	flow-children: right;
+	background-color: offWhite&0C;
+}
+
+#PMTableRow
+{
+	width: 100%;
+	height: 28px;
+	flow-children: right;
+}
+
+.PMTableRow.me
+{
+	background-color: offWhite&18;
+}
+
+#PMTableRow.spacer
+{
+	height: 10px;
+	background-color: transparent;
+}
+
+/*
+ * Fixed widths per column, on purpose.
+ *
+ * These used to be fill-parent-flow(1.0) with one fixed column at the end, and the four
+ * columns collapsed into each other: every value rendered on top of the metric name.
+ * Panorama's flow negotiation does not do what it looks like it does with four flexible
+ * siblings and one fixed one, and the failure is silent.
+ */
+.PMCell
+{
+	width: 15%;
+	vertical-align: middle;
+	font-size: 19px;
+	font-family: block;
+	color: offWhite&BB;
+	text-align: right;
+}
+
+.PMCell.name
+{
+	width: 26%;
+	text-align: left;
+	text-overflow: shrink;
+}
+
+/* The two tables share .PMCell but have different shapes: the lobby row also carries a
+ * damage bar, the stat line does not. One name width for both leaves one of them short. */
+#PMStatHeader .PMCell.name,
+#PMStatBody .PMCell.name
+{
+	width: 40%;
+}
+
+.PMCell.kda
+{
+	width: 12%;
+}
+
+.PMCell.rank
+{
+	width: 11%;
+}
+
+.PMCell.dmg
+{
+	width: 15%;
+}
+
+.PMCell.head
+{
+	color: offWhite&77;
+	font-size: 15px;
+	text-transform: uppercase;
+}
+
+/*
+ * Lower half of the report. Each section owns its own body id, which is what lets a
+ * section be filled without every other section being rewritten first.
+ */
+
+/* THE BREAKDOWN: three tagged rows, then the award chips the game itself awarded. */
+.PMBreakdownRowItem
+{
+	width: 100%;
+	min-height: 24px;
+	flow-children: right;
+	margin-top: 4px;
+}
+
+.PMBreakdownTag
+{
+	width: 110px;
+	vertical-align: middle;
+	font-size: 15px;
+	font-family: block;
+	font-weight: bold;
+	color: #FF9900;
+	text-transform: uppercase;
+	text-align: left;
+}
+
+.PMBreakdownRowItem .PMBreakdownLine
+{
+	width: fill-parent-flow( 1.0 );
+	margin-top: 0px;
+}
+
+#PMAwardRow
+{
+	width: 100%;
+	flow-children: right-wrap;
+	margin-top: 8px;
+}
+
+.PMAwardChip
+{
+	margin-right: 8px;
+	margin-bottom: 4px;
+	padding: 4px 10px 4px 10px;
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&CC;
+	background-color: offWhite&12;
+	border-radius: 3px;
+}
+
+.PMAwardChip.none
+{
+	color: offWhite&55;
+	background-color: transparent;
+}
+
+/* Stat line: you vs the lobby median, per metric, with the position out of N. */
+#PMStatHeader,
+#PMStatBody
+{
+	width: 100%;
+	flow-children: down;
+}
+
+#PMStatHeader
+{
+	height: 24px;
+	flow-children: right;
+	background-color: offWhite&0C;
+}
+
+.PMTableRow.warn
+{
+	border-left: 2px solid #FF9900;
+}
+
+/* Lobby by hero damage. The bar is the point: two four-digit numbers side by side
+ * hide how big the gap to the top of the lobby actually is. */
+#PMLobbyBody
+{
+	width: 100%;
+	flow-children: down;
+}
+
+.PMLobbyName
+{
+	width: 26%;
+	flow-children: right;
+	vertical-align: middle;
+}
+
+.PMLobbyBarCell
+{
+	width: 19%;
+	height: 28px;
+	vertical-align: middle;
+	padding-right: 8px;
+	padding-left: 8px;
+}
+
+#PMLobbyBarCell .PMItemBarTrack
+{
+	width: 100%;
+}
+
+.PMItemBarFill.me
+{
+	background-color: #FF9900;
+}
+
+/* WHAT TO CHANGE: the advice list from the desktop app's engine. */
+#PMAdviceBody
+{
+	width: 100%;
+	flow-children: down;
+}
+
+.PMAdviceRow
+{
+	width: 100%;
+	min-height: 24px;
+	flow-children: right;
+	margin-top: 4px;
+}
+
+.PMAdviceIndex
+{
+	width: 26px;
+	vertical-align: middle;
+	font-size: 18px;
+	font-family: block;
+	font-weight: bold;
+	color: #FF9900;
+	text-align: left;
+}
+
+/* Team totals cells are addressed by id from pm_core so both columns are filled from
+ * the same loop; the class only carries the layout. */
+.PMTeamCellMine,
+.PMTeamCellTheirs
+{
+	width: 100%;
+	height: 34px;
+	flow-children: right;
+}
+
+/* Diagnostics and the fail-open problem list. */
+#PMDiagBody,
+#PMProblemsBody
+{
+	width: 100%;
+	flow-children: down;
+}
+
+#PMProblemsHeader
+{
+	margin-top: 10px;
+	font-size: 15px;
+	color: offWhite&55;
+}
+
+.PMProblemRow
+{
+	width: 100%;
+	flow-children: right;
+}
+
+#PMHeroMeta2
+{
+	margin-top: 4px;
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&77;
+	text-transform: uppercase;
+}
+
+/* Itemization bars. */
+#PMItemRow
+{
+	width: 100%;
+	height: 26px;
+	flow-children: right;
+}
+
+.PMItemLabel
+{
+	width: 140px;
+	vertical-align: middle;
+	font-size: 18px;
+	font-family: block;
+	color: offWhite&BB;
+	text-align: left;
+}
+
+.PMItemBarTrack
+{
+	width: fill-parent-flow( 1.0 );
+	height: 14px;
+	vertical-align: middle;
+	background-color: offWhite&10;
+}
+
+.PMItemBarFill
+{
+	height: 100%;
+	background-color: #5FE6A2;
+}
+
+.PMItemPct
+{
+	width: 90px;
+	vertical-align: middle;
+	font-size: 18px;
+	font-family: block;
+	color: offWhite&BB;
+	text-align: right;
+}
+
+/* Team totals: two columns, ours vs theirs. */
+#PMTeamColumns
+{
+	width: 100%;
+	flow-children: right;
+}
+
+.PMTeamColumn
+{
+	width: fill-parent-flow( 1.0 );
+	margin-right: 12px;
+	flow-children: down;
+	background-color: offWhite&06;
+	border-radius: 4px;
+	padding: 8px;
+}
+
+.PMTeamValue
+{
+	font-size: 26px;
+	font-family: block;
+	font-weight: bold;
+	color: offWhite&EE;
+	text-align: right;
+}
+
+.PMTeamLabel
+{
+	font-size: 15px;
+	font-family: block;
+	color: offWhite&77;
+	text-transform: uppercase;
+	text-align: right;
+}
+
+/* Everything below this is the API-only path. pm_net.js collapses it when the
+ * transport is unavailable, so the layout never shows a section with no content. */
+#PMOfflineNotice
+{
+	width: fill-parent-flow( 1.0 );
+	margin: 18px 24px 18px 24px;
+	padding: 10px;
+	font-size: 18px;
+	font-family: block;
+	color: offWhite&88;
+	background-color: offWhite&0A;
+	border-radius: 4px;
+}
+
+#PMFooter
+{
+	width: 100%;
+	height: 40px;
+	flow-children: right;
+	border-top: 1px solid offWhite&12;
+}
+
+#PMFooterNote
+{
+	vertical-align: middle;
+	margin-left: 24px;
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&55;
+}
+
+/*
+ * Status line used by the CEF probe. Kept out of the frame so probe output can be
+ * read without opening a log file.
+ */
+#PMStatus
+{
+	width: fill-parent-flow( 1.0 );
+	margin: 8px 24px 8px 24px;
+	font-size: 16px;
+	font-family: block;
+	color: offWhite&88;
+}
+
+/* ── Вердикт ─────────────────────────────────────────────────────────────────────
+   The answer to "how was that", placed directly under the hero so it reads before any
+   scrolling. The three states are colour-coded, but the colour is decoration: the
+   wording carries the meaning on its own.
+ */
+#PMVerdict
+{
+	width: fill-parent-flow( 1.0 );
+	margin-top: 14px;
+	margin-left: 24px;
+	margin-right: 24px;
+	padding: 12px 16px 12px 16px;
+	flow-children: down;
+	border-left: 4px solid offWhite&55;
+	background-color: offWhite&08;
+}
+
+#PMVerdict.good
+{
+	border-left-color: #5FE6A2;
+	background-color: #5FE6A214;
+}
+
+#PMVerdict.mid
+{
+	border-left-color: #F0C040;
+	background-color: #F0C04014;
+}
+
+#PMVerdict.bad
+{
+	border-left-color: #FF7A5C;
+	background-color: #FF7A5C14;
+}
+
+#PMVerdictTitle
+{
+	font-size: 30px;
+	font-family: block;
+	font-weight: bold;
+	color: offWhite&EE;
+	text-transform: uppercase;
+	letter-spacing: 2px;
+}
+
+#PMVerdictNote
+{
+	margin-top: 4px;
+	font-size: 19px;
+	font-family: block;
+	color: offWhite&AA;
+}
+
+/* ── График «ты против медианы» ─────────────────────────────────────────────────
+   Each row is normalised against its own maximum, because six metrics in six different
+   units on one shared scale is six rows that all read as "zero".
+ */
+#PMChartLegend
+{
+	width: 100%;
+	height: 22px;
+	flow-children: right;
+	margin-bottom: 4px;
+}
+
+#PMChartLegend .PMLegendYou
+{
+	width: 19%;
+	font-size: 15px;
+	font-family: block;
+	color: #5FE6A2;
+	text-transform: uppercase;
+}
+
+#PMChartLegend .PMLegendMedian
+{
+	font-size: 15px;
+	font-family: block;
+	color: offWhite&55;
+	text-transform: uppercase;
+}
+
+#PMIgnoredRow
+{
+	width: 100%;
+	flow-children: down;
+	margin-top: 6px;
+}
+
+.PMIgnoredItem
+{
+	width: 100%;
+	flow-children: right;
+}
+
+.PMIgnoredLabel
+{
+	width: 100%;
+	font-size: 17px;
+	font-family: block;
+	color: offWhite&66;
+	font-style: italic;
+}
+
+#PMChartBody
+{
+	width: 100%;
+	flow-children: down;
+}
+
+#PMChartRow
+{
+	width: 100%;
+	height: 38px;
+	flow-children: right;
+	margin-bottom: 4px;
+}
+
+#PMChartName
+{
+	width: 19%;
+	vertical-align: middle;
+	font-size: 17px;
+	font-family: block;
+	color: offWhite&AA;
+	text-overflow: shrink;
+}
+
+#PMChartBars
+{
+	width: 45%;
+	vertical-align: middle;
+	flow-children: down;
+}
+
+#PMChartTrack
+{
+	width: 100%;
+	height: 12px;
+	margin-top: 2px;
+	margin-bottom: 2px;
+	background-color: offWhite&0E;
+}
+
+.PMChartFill.you
+{
+	height: 100%;
+	background-color: #5FE6A2;
+}
+
+.PMChartFill.median
+{
+	height: 100%;
+	background-color: offWhite&44;
+}
+
+#PMChartYou
+{
+	width: 12%;
+	vertical-align: middle;
+	font-size: 19px;
+	font-family: block;
+	color: #5FE6A2;
+	text-align: right;
+}
+
+#PMChartMedian
+{
+	width: 12%;
+	vertical-align: middle;
+	font-size: 18px;
+	font-family: block;
+	color: offWhite&66;
+	text-align: right;
+}
+
+#PMChartRank
+{
+	width: 12%;
+	vertical-align: middle;
+	font-size: 18px;
+	font-family: block;
+	color: offWhite&99;
+	text-align: right;
+}
+
+/* ── Советы: причина -> решение ───────────────────────────────────────────────── */
+#PMAdviceBody
+{
+	width: 100%;
+	flow-children: down;
+}
+
+.PMAdviceCard
+{
+	width: 100%;
+	margin-bottom: 8px;
+	padding: 10px 14px 10px 14px;
+	flow-children: down;
+	background-color: offWhite&06;
+	border-left: 3px solid offWhite&44;
+}
+
+.PMAdviceCard.bad
+{
+	border-left-color: #FF7A5C;
+}
+
+.PMAdviceCard.mid
+{
+	border-left-color: #F0C040;
+}
+
+.PMAdviceCard.good
+{
+	border-left-color: #5FE6A2;
+}
+
+.PMAdviceHead
+{
+	width: 100%;
+	height: 24px;
+	flow-children: right;
+}
+
+#PMAdviceName
+{
+	width: fill-parent-flow( 1.0 );
+	vertical-align: middle;
+	font-size: 20px;
+	font-family: block;
+	font-weight: bold;
+	color: offWhite&DD;
+	text-transform: uppercase;
+}
+
+#PMAdvicePlace
+{
+	width: 160px;
+	vertical-align: middle;
+	font-size: 17px;
+	font-family: block;
+	color: offWhite&77;
+	text-align: right;
+}
+
+.PMAdviceLine
+{
+	width: 100%;
+	min-height: 22px;
+	flow-children: right;
+	margin-top: 3px;
+}
+
+.PMAdviceLine.fix
+{
+	margin-top: 5px;
+}
+
+#PMAdviceKey
+{
+	width: 120px;
+	vertical-align: top;
+	font-size: 16px;
+	font-family: block;
+	font-weight: bold;
+	color: offWhite&66;
+	text-transform: uppercase;
+}
+
+#PMAdviceText
+{
+	width: fill-parent-flow( 1.0 );
+	vertical-align: top;
+	font-size: 18px;
+	font-family: block;
+	color: offWhite&CC;
+}
+
+/* ── Команды ─────────────────────────────────────────────────────────────────── */
+#PMTeamColumns .PMTeamMine
+{
+	border-left: 3px solid #5FE6A2;
+}
+
+#PMTeamColumns .PMTeamTheirs
+{
+	border-left: 3px solid #FF7A5C;
+}
+
