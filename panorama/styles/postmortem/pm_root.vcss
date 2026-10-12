@@ -1017,3 +1017,185 @@
 	border-left: 3px solid #FF7A5C;
 }
 
+/* ── Редизайн: поверхность и акценты ─────────────────────────────────────────
+ * Только переопределения поверх базовых правил выше (каскад: позже = сильнее).
+ * Селекторы и структура не меняются, поэтому make() и проверки не трогаем.
+ */
+#PMFrame
+{
+	background-color: #0C100E;
+	border: 1px solid offWhite&2A;
+	border-radius: 10px;
+}
+
+#PMHeader
+{
+	height: 60px;
+	background-color: #141916;
+	border-bottom: 2px solid #FF9900;
+}
+
+#PMTitleLabel
+{
+	color: #FF9900;
+}
+
+#PMSectionTitle
+{
+	color: offWhite&EE;
+}
+
+#PMHeroCard
+{
+	background-color: #161C18;
+	border: 1px solid offWhite&14;
+	border-radius: 6px;
+}
+
+.PMMetricCard
+{
+	background-color: #161C18;
+	border-top: 3px solid offWhite&22;
+	border-radius: 6px;
+}
+
+.PMMetricCard.warn
+{
+	border-top-color: #FF9900;
+}
+
+.PMMetricValue
+{
+	font-size: 36px;
+}
+
+.PMAdviceCard
+{
+	background-color: #161C18;
+	border-radius: 6px;
+}
+
+/* ── Поиск и API ─────────────────────────────────────────────────────────────
+ * Новые id используются из pm_core.js (PMSearch*): id в третьем слоте make(),
+ * классы — в четвёртом. Правило переполнения: 100% без боковых отступов, либо
+ * fill-parent-flow( 1.0 ) с отступами.
+ */
+#PMSearchInput
+{
+	width: fill-parent-flow( 1.0 );
+	height: 38px;
+	vertical-align: middle;
+	padding-left: 12px;
+	padding-right: 12px;
+	font-size: 19px;
+	font-family: block;
+	color: offWhite&DD;
+	background-color: #06080A;
+	border: 1px solid offWhite&22;
+	border-radius: 6px;
+}
+
+#PMSearchButton
+{
+	vertical-align: middle;
+	height: 38px;
+	margin-left: 8px;
+	padding-left: 18px;
+	padding-right: 18px;
+	border-radius: 6px;
+	background-color: #1D3A2A;
+	border: 1px solid #5FE6A2;
+}
+
+#PMSearchButton:hover
+{
+	brightness: 1.6;
+}
+
+#PMSearchButtonLabel
+{
+	vertical-align: middle;
+	horizontal-align: middle;
+	font-size: 20px;
+	font-family: block;
+	font-weight: semi-bold;
+	color: #5FE6A2;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+
+#PMSearchStatus
+{
+	margin-top: 8px;
+	font-size: 17px;
+	font-family: block;
+	color: offWhite&77;
+}
+
+#PMSearchBody,
+#PMForeignBody,
+#PMApiBody
+{
+	width: 100%;
+	flow-children: down;
+	margin-top: 6px;
+}
+
+.PMSearchRow
+{
+	width: 100%;
+	min-height: 34px;
+	flow-children: right;
+	margin-top: 6px;
+	padding: 4px 10px 4px 10px;
+	background-color: offWhite&06;
+	border-radius: 4px;
+}
+
+.PMSearchName
+{
+	width: fill-parent-flow( 1.0 );
+	vertical-align: middle;
+	font-size: 19px;
+	font-family: block;
+	color: offWhite&DD;
+	text-overflow: shrink;
+}
+
+.PMSearchMeta
+{
+	width: 170px;
+	vertical-align: middle;
+	font-size: 17px;
+	font-family: block;
+	color: offWhite&77;
+	text-align: right;
+}
+
+.PMSmallButton
+{
+	vertical-align: middle;
+	height: 28px;
+	margin-left: 8px;
+	padding-left: 12px;
+	padding-right: 12px;
+	border-radius: 4px;
+	background-color: rgba( 240, 233, 231, 0.1 );
+}
+
+.PMSmallButton:hover
+{
+	brightness: 2.0;
+}
+
+.PMSmallButtonLabel
+{
+	vertical-align: middle;
+	horizontal-align: middle;
+	font-size: 16px;
+	font-family: block;
+	font-weight: semi-bold;
+	color: offWhite&BB;
+	text-transform: uppercase;
+}
+

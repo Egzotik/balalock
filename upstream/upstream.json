@@ -87,6 +87,29 @@
         "{d:match_load_state}",
         "CitadelPostGameScoreboardNew"
       ]
+    },
+    {
+      "ours": "panorama/layout/hud_escape_menu.xml",
+      "base": "upstream/hud_escape_menu.xml",
+      "rootPanel": "CitadelHudEscapeMenu",
+      "vanillaRequiredChildren": [
+        "EscapeBackground",
+        "LeftStripe",
+        "Menu",
+        "SubOptions"
+      ],
+      "vanillaOptionalChildren": [
+        "FriendsList",
+        "PlayersList"
+      ],
+      "addedByUs": [
+        "PM_EscapeButton"
+      ],
+      "modifiedByUs": [],
+      "hostRole": "entry point C: in-match ESC menu, API-only (search + foreign matches)",
+      "dataSources": [
+        "deadlock-api.com via bridge worker"
+      ]
     }
   ]
 }

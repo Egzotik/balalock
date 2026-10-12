@@ -61,15 +61,12 @@ var DOWNLINK_LIMIT = 4096;   // measured, not assumed
 var REQUEST_TIMEOUT = 8.0;   // seconds
 var BRIDGE_SIZE = 2;         // px. see trap 1.
 
-// Where the bridge page lives. A real https origin, not a data: URL:
-//   - data: documents have an opaque origin where `localStorage` THROWS SecurityError
-//     (it is a throwing getter, not a plain undefined), which aborted an entire page
-//     script for the reference probe and made the log read as "fetch is absent";
-//   - a real origin also lets us proxy the API, which closes CORS and any old-TLS
-//     problem in one move.
-// Left empty on purpose: an unset bridge reports "not configured" instead of hammering
-// a placeholder host. Fill it in before expecting API data.
-var BRIDGE_URL = '';
+// Where the bridge page lives: our own worker, same origin as the API proxy, so the
+// page fetches same-origin (no CORS, modern TLS) and Panorama pulls slices by index.
+// Worker source: bridge/worker.js. Deploy with `wrangler deploy` (see bridge/README.md).
+// NOTE: written as two literals because tools/check_js_exports.py strips // to end
+// of line even inside a string. The runtime value is the plain https URL.
+var BRIDGE_URL = 'https:/' + '/balalock.egz0tikys99.workers.dev';
 
 var netState = {
     panel: null,

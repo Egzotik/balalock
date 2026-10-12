@@ -1,0 +1,116 @@
+<!--
+  POSTMORTEM — override of panorama/layout/hud_escape_menu.xml
+
+  ENTRY POINT C: in-match ESC menu. Works mid-game, unlike profile/post-game hosts.
+  Proven mount pattern (same as the poker ESC mod): keep the whole stock shell
+  (CitadelHudEscapeMenu, friends/players tabs), add one button into #Menu.
+  This host is API-only: no scoreboard and no career state exist here, so the
+  overlay opens on the search section (pm_core.js refreshEscape).
+
+  HARD RULES
+  1. ADD ONLY. Never remove or rename a vanilla child; C++ looks them up by name.
+  2. Keep the _c suffix on every <include>; the game resolves compiled names only.
+  3. oncancel stays CitadelResumePlaying (vanilla). The overlay is a child of this
+     context: closing the menu drops it, and pm_core.js rebuilds it on next open.
+  4. pm_root.vcss is included here because the overlay is created at runtime in THIS
+     file's context, and a panel only sees its own context's stylesheets.
+-->
+<root>
+	<styles>
+		<include src="s2r://panorama/styles/citadel_base_styles.vcss_c" />
+		<include src="s2r://panorama/styles/hud_escape_menu.vcss_c" />
+		<include src="s2r://panorama/styles/postmortem/pm_button.vcss_c" />
+		<include src="s2r://panorama/styles/postmortem/pm_root.vcss_c" />
+	</styles>
+	<scripts>
+		<include src="s2r://panorama/scripts/postmortem/pm_text.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_analysis.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_compat.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_data.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_net.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_api.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_probe.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_core.vjs_c" />
+	</scripts>
+	<CitadelHudEscapeMenu oncancel="CitadelResumePlaying()">
+		<Panel id="EscapeBackground" onactivate="CitadelResumePlaying()" />
+		<Panel id="LeftStripeBlur" />
+		<Panel id="LeftStripe" hittest="false">
+			<Panel id="Menu" hittest="false">
+				<Panel id="ContextualMenu">
+					<Panel class="MatchmakingOptions OptionGroup">
+						<Button id="matchmakingLeaveQueue" class="nav_menu_item primary leavequeue" onactivate="CitadelLeaveMatchmaking()">
+							<Label text="#menu_leave_queue" class="menuButtonLabel" antialias="true" />
+						</Button>
+						<Button id="matchmakingEditRoster" class="nav_menu_item primary" onactivate="CitadelEditMatchmakingRoster()">
+							<Panel class="MenuIcon" />
+							<Label text="#menu_edit_roster" class="menuButtonLabel" />
+						</Button>
+					</Panel>
+					<Panel class="ReconnectOptions OptionGroup">
+						<Button id="reconnectRejoin" class="nav_menu_item primary" onactivate="CitadelReconnect()" onmouseover="UIShowTextTooltip( #Citadel_Dashboard_RejoinTooltip )" onmouseout="UIHideTextTooltip()">
+							<Label text="#menu_rejoin" class="menuButtonLabel" />
+						</Button>
+						<Button id="reconnectAbandon" class="nav_menu_item primary endsession" onactivate="CitadelConfirmAbandonGame()">
+							<Label text="{s:reconnect_abandon_action}" class="menuButtonLabel" />
+						</Button>
+					</Panel>
+					<Button id="disconnect" class="nav_menu_item primary" onactivate="CitadelDisconnectFromGame()">
+						<Label text="#menu_disconnect" class="menuButtonLabel" />
+					</Button>
+					<Button id="abandon" class="nav_menu_item primary endsession" onactivate="CitadelConfirmAbandonGame()">
+						<Label text="{s:abandon_action}" class="menuButtonLabel" />
+					</Button>
+					<Button id="Unstick" class="nav_menu_item minor" onactivate="CitadelConCommand( &apos;unstick&apos; );" onmouseover="CitadelUIShowTextTooltip( &apos;#DevMenu_UnstickHeroTooltip&apos; )" onmouseout="CitadelUIHideTextTooltip()">
+						<Label text="#DevMenu_UnstickHero" class="menuButtonLabel" />
+					</Button>
+				</Panel>
+				<Button id="changehero" class="nav_menu_item primary" onactivate="CitadelEscapeMenuChangeHero()">
+					<Label text="#menu_changehero" class="menuButtonLabel" />
+				</Button>
+				<!-- POSTMORTEM addition: entry point C. Same overlay as the other
+				     hosts; in this context it opens on the player-search section. -->
+				<Button id="PM_EscapeButton" class="nav_menu_item primary" onactivate="PMOpenOverlay();" onmouseover="UIShowTextTooltip( &quot;Postmortem: search players and matches&quot; );" onmouseout="UIHideTextTooltip();">
+					<Label class="menuButtonLabel" text="POSTMORTEM" />
+				</Button>
+				<Panel id="SubOptions">
+					<Panel class="FeedbackRow">
+						<Button id="PlayerFeedback" class="nav_menu_item minor" onactivate="CitadelShowPlayerFeedbackPopup()">
+							<Label text="#Citadel_PlayerFeedback_Title" class="menuButtonLabel" />
+						</Button>
+					</Panel>
+					<Panel class="SettingsRow">
+						<Button id="settings" class="nav_menu_item minor" onactivate="CitadelSettings()">
+							<Panel class="smallIcon GearIcon" />
+							<Label text="#menu_settings" class="menuButtonLabel" />
+						</Button>
+						<Button id="QuickMute" class="nav_menu_item minor" onactivate="CitadelMuteButtonClicked();" onmouseover="CitadelUIShowTextTooltip( &apos;#citadel_mute_game_audio&apos; )" onmouseout="CitadelUIHideTextTooltip()" />
+					</Panel>
+					<Button id="quit" onactivate="CitadelQuitConfirm()">
+						<Label text="#menu_exit_deadlock" />
+					</Button>
+				</Panel>
+			</Panel>
+		</Panel>
+		<CitadelPrivilegedFeatures id="PrivilegedFeatures" />
+		<CitadelBindingButton id="EscapeButton" action="MenuBack" onactivate="CitadelResumePlaying()" text="#menu_resume" />
+		<Panel id="RightSideBlur" hittest="false" />
+		<Panel id="RightSide" hittest="false">
+			<Panel id="PartySpacer" />
+			<Panel class="FriendsOrPlayersTabs">
+				<Panel class="Center">
+					<TabButton id="FriendsTab" class="FriendsOrPlayersButton" group="people_list_tabs" text="#Citadel_Friends_WindowTitle" selected="true" />
+					<TabButton id="PlayersTab" class="FriendsOrPlayersButton" group="people_list_tabs" text="#Citadel_Players_WindowTitle" />
+				</Panel>
+			</Panel>
+			<Panel class="FriendsOrPlayersContents" hittest="false">
+				<TabContents id="FriendsTabContents" tabid="FriendsTab" group="people_list_tabs" hittest="false" selected="true">
+					<CitadelFriendsList id="FriendsList" />
+				</TabContents>
+				<TabContents id="PlayersTabContents" tabid="PlayersTab" group="people_list_tabs" hittest="false">
+					<CitadelPlayersList id="PlayersList" />
+				</TabContents>
+			</Panel>
+		</Panel>
+	</CitadelHudEscapeMenu>
+</root>

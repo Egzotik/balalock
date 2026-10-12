@@ -103,3 +103,15 @@
 {
 	margin: 0px;
 }
+
+/*
+ * ESC-menu host: full-width row inside #Menu, in the vanilla nav_menu_item line.
+ * The vanilla class already paints the row; here only spacing and resting opacity,
+ * plus the orange underline inherited from .PMButton.
+ */
+#Menu #PM_EscapeButton
+{
+	width: 100%;
+	margin: 4px 0px 4px 0px;
+	opacity: 0.8;
+}

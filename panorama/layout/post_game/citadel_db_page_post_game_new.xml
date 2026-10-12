@@ -58,6 +58,7 @@
 
 		<include src="s2r://panorama/scripts/postmortem/pm_data.vjs_c" />
 		<include src="s2r://panorama/scripts/postmortem/pm_net.vjs_c" />
+		<include src="s2r://panorama/scripts/postmortem/pm_api.vjs_c" />
 		<include src="s2r://panorama/scripts/postmortem/pm_probe.vjs_c" />
 		<include src="s2r://panorama/scripts/postmortem/pm_core.vjs_c" />
 	</scripts>

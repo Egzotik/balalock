@@ -85,6 +85,19 @@ var HOSTS = {
             'CenterRightCommandPanel', 'RightCommandPanel'
         ],
         optional: []
+    },
+
+    // Entry point C: the in-match ESC menu (hud_escape_menu.xml). Proven mount pattern:
+    // keep the whole stock shell (CitadelHudEscapeMenu, friends/players tabs, chat),
+    // add one button into #Menu and host the same overlay. oncancel stays vanilla
+    // (CitadelResumePlaying) - PMOnCancel only handles our own overlay hosts.
+    escape: {
+        rootIds: ['CitadelHudEscapeMenu'],
+        required: [
+            'EscapeBackground', 'LeftStripe', 'Menu', 'SubOptions',
+            'PM_EscapeButton'
+        ],
+        optional: ['FriendsList', 'PlayersList']
     }
 };
 

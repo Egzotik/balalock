@@ -109,8 +109,8 @@ if ($errors.Count -gt 0) {
 Ok ($summary -replace '\s+', ' ').Trim()
 
 $compiled = @(Get-ChildItem $csdkGame -Recurse -File -Filter '*_c')
-if ($compiled.Count -lt 11) {
-    Die "only $($compiled.Count) compiled assets in the game tree, expected at least 11"
+if ($compiled.Count -lt 13) {
+    Die "only $($compiled.Count) compiled assets in the game tree, expected at least 13"
 }
 foreach ($c in $compiled) { Ok ($c.FullName.Substring($csdkGame.Length + 1)) }
 
@@ -299,6 +299,7 @@ pak = vpk.open(sys.argv[1])
 need = [
     'panorama/layout/citadel_db_page_profile.vxml_c',
     'panorama/layout/post_game/citadel_db_page_post_game_new.vxml_c',
+    'panorama/layout/hud_escape_menu.vxml_c',
     'panorama/styles/postmortem/pm_button.vcss_c',
     'panorama/styles/postmortem/pm_root.vcss_c',
     'panorama/scripts/postmortem/pm_text.vjs_c',
@@ -306,6 +307,7 @@ need = [
     'panorama/scripts/postmortem/pm_data.vjs_c',
     'panorama/scripts/postmortem/pm_analysis.vjs_c',
     'panorama/scripts/postmortem/pm_net.vjs_c',
+    'panorama/scripts/postmortem/pm_api.vjs_c',
     'panorama/scripts/postmortem/pm_probe.vjs_c',
     'panorama/scripts/postmortem/pm_core.vjs_c',
 ]

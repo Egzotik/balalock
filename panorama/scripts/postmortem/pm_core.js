@@ -56,6 +56,9 @@ function detectHost(contextPanel) {
     if (contextPanel.id === 'CitadelProfilePage' || contextPanel.paneltype === 'CitadelProfilePage') {
         return 'profile';
     }
+    if (contextPanel.id === 'CitadelHudEscapeMenu' || contextPanel.paneltype === 'CitadelHudEscapeMenu') {
+        return 'escape';
+    }
     return null;
 }
 
@@ -63,7 +66,8 @@ function detectHost(contextPanel) {
 // but keeping them separate means a host can be renamed in one place only.
 var HOST_SPEC = {
     profile: 'profile',
-    post_game: 'post_game'
+    post_game: 'post_game',
+    escape: 'escape'
 };
 
 // ── panel helpers ─────────────────────────────────────────────────────────────────
@@ -135,6 +139,24 @@ function buildOverlay(context) {
 
     var status = make('Label', body, 'PMStatus', '');
     status.text = T.statusLoading;
+
+    // Search: nickname / SteamID / account ID via deadlock-api.com, in every host.
+    // In the ESC host this is the MAIN section (no scoreboard there); in profile and
+    // post-game it sits on top as an additional entry to foreign matches. Offline it
+    // collapses to a one-line notice, so the layout never shows an empty control.
+    var searchSection = make('Panel', body, 'PMSection', '');
+    make('Label', searchSection, 'PMSectionTitle', '').text = T.searchTitle;
+    make('Panel', searchSection, 'PMSectionRule', '');
+    make('Label', searchSection, '', 'PMBreakdownLine').text = T.searchHint;
+    var searchRow = make('Panel', searchSection, '', 'PMSearchRow');
+    make('TextEntry', searchRow, 'PMSearchInput', '');
+    var searchButton = make('Button', searchRow, 'PMSearchButton', '');
+    make('Label', searchButton, 'PMSearchButtonLabel', '').text = T.searchButton;
+    searchButton.SetPanelEvent('onactivate', coreSearchRun);
+    make('Label', searchSection, 'PMSearchStatus', '');
+    make('Panel', searchSection, 'PMSearchBody', '');
+    make('Panel', searchSection, 'PMForeignBody', '');
+    make('Panel', searchSection, 'PMApiBody', '');
 
     // hero card. Populated in phase 3 from the native scoreboard; the structure is here
     // now so the layout does not shift later.
@@ -303,7 +325,16 @@ var state = {
 
     // Latched diagnostics, so a 0.5 second refresh loop does not repeat itself.
     hostWarned: false,
-    refreshErrors: 0
+    refreshErrors: 0,
+
+    // Search + API state. Survives refreshes; cleared only by a new search.
+    searchBusy: false,
+    searchResults: null,
+    searchAccount: '',
+    searchHistory: null,
+    searchMatch: null,
+    searchCard: null,
+    boardLoaded: false
 };
 
 function note(msg) {
@@ -495,7 +526,7 @@ function openOverlay() {
         $.Msg('[PM] open requested but host context is gone');
         return;
     }
-    if (!state.overlay) { state.overlay = buildOverlay(context); }
+    if (!state.overlay || !alive(state.overlay)) { state.overlay = buildOverlay(context); }
     if (!state.overlay) { return; }
 
     // If the layout was not resolved when the scripts ran, the cached geometry is empty.
@@ -590,6 +621,7 @@ function refresh() {
     try {
         if (state.host === 'profile') { refreshProfile(context); }
         else if (state.host === 'post_game') { refreshPostGame(context); }
+        else if (state.host === 'escape') { refreshEscape(context); }
         state.refreshErrors = 0;
     } catch (err) {
         state.refreshErrors = (state.refreshErrors || 0) + 1;
@@ -978,6 +1010,265 @@ function renderProfile(context, career, history) {
     }
 }
 
+// ── escape host + API search ─────────────────────────────────────────────────────
+// The ESC menu has no scoreboard and no career state: it is a pure API host. Search,
+// foreign histories and match lookups all run through PM.Api (bridge/worker.js); the
+// offline report sections below stay empty here by design and the search section on
+// top is the screen.
+
+function refreshEscape(context) {
+    var status = context.FindChildTraverse('PMStatus');
+    if (!PM.Api || !PM.Api.configured()) {
+        setLabelText(status, T.escHint + ' ' + T.searchNoApi);
+    } else {
+        setLabelText(status, T.escHint + ' API: deadlock-api.com.');
+    }
+}
+
+function coreSearchStatus(text) {
+    var box = body('PMSearchStatus');
+    setLabelText(box, text);
+}
+
+function coreMins(secs) {
+    if (typeof secs !== 'number' || !isFinite(secs) || secs <= 0) { return '?'; }
+    return Math.floor(secs / 60) + ':' + ('0' + Math.floor(secs % 60)).slice(-2);
+}
+
+function coreSearchRun() {
+    if (state.searchBusy) { return; }
+    if (!PM.Api) {
+        coreSearchStatus(T.searchNoApi);
+        return;
+    }
+    if (!PM.Api.configured()) {
+        coreSearchStatus(T.searchNoApi + ' ' + T.searchNeedBridge);
+        return;
+    }
+    var input = body('PMSearchInput');
+    var query = '';
+    if (alive(input) && typeof input.text === 'string') { query = input.text; }
+    query = query.replace(/^\s+|\s+$/g, '');
+    if (!query.length) {
+        coreSearchStatus(T.searchHint);
+        return;
+    }
+    state.searchBusy = true;
+    state.searchResults = null;
+    state.searchHistory = null;
+    state.searchMatch = null;
+    state.searchCard = null;
+    clearChildren(body('PMSearchBody'));
+    clearChildren(body('PMForeignBody'));
+    clearChildren(body('PMApiBody'));
+    coreSearchStatus(T.searchRunning);
+    $.Msg('[PM] search: ' + query);
+    PM.Api.searchPlayers(query, function (searchErr, searchList) {
+        state.searchBusy = false;
+        if (searchErr) {
+            coreSearchStatus(T.searchFail + searchErr);
+            return;
+        }
+        if (!searchList || !searchList.length) {
+            coreSearchStatus(T.searchEmpty);
+            return;
+        }
+        state.searchResults = searchList;
+        coreSearchStatus(T.searchFound + ': ' + searchList.length);
+        coreSearchRender();
+    });
+}
+
+function coreSearchRender() {
+    var list = body('PMSearchBody');
+    if (!alive(list)) { return; }
+    clearChildren(list);
+    var results = state.searchResults || [];
+    for (var i = 0; i < results.length && i < 8; i++) {
+        (function (player) {
+            var row = make('Panel', list, '', 'PMSearchRow');
+            var name = make('Label', row, '', 'PMSearchName');
+            name.text = (player.name || '?') + '  #' + (player.account_id === null ? '?' : player.account_id);
+            var meta = make('Label', row, '', 'PMSearchMeta');
+            meta.text = (player.matches === null ? '' : (player.matches + ' к.'));
+            var historyButton = make('Button', row, '', 'PMSmallButton');
+            make('Label', historyButton, '', 'PMSmallButtonLabel').text = T.searchMatchesButton;
+            historyButton.SetPanelEvent('onactivate', function () {
+                coreHistoryLoad(player.account_id);
+            });
+            var cardButton = make('Button', row, '', 'PMSmallButton');
+            make('Label', cardButton, '', 'PMSmallButtonLabel').text = T.searchCardButton;
+            cardButton.SetPanelEvent('onactivate', function () {
+                coreCardLoad(player.account_id);
+            });
+        })(results[i]);
+    }
+}
+
+function coreHistoryLoad(accountId) {
+    if (state.searchBusy || !PM.Api) { return; }
+    state.searchBusy = true;
+    clearChildren(body('PMForeignBody'));
+    coreSearchStatus(T.apiLoading);
+    state.searchAccount = String(accountId);
+    PM.Api.accountHistory(accountId, function (historyErr, history) {
+        state.searchBusy = false;
+        if (historyErr) {
+            coreSearchStatus(T.apiFail + historyErr);
+            return;
+        }
+        state.searchHistory = history;
+        coreSearchStatus(T.searchHistoryTitle + ': ' + (history ? history.length : 0));
+        coreHistoryRender();
+    });
+}
+
+function coreHistoryRender() {
+    var box = body('PMForeignBody');
+    if (!alive(box)) { return; }
+    clearChildren(box);
+    make('Label', box, '', 'PMBreakdownLine').text =
+        T.searchHistoryTitle + ' #' + state.searchAccount;
+    var history = state.searchHistory || [];
+    for (var i = 0; i < history.length && i < 10; i++) {
+        (function (match) {
+            var row = make('Panel', box, '', 'PMSearchRow');
+            var won = match.match_result === 0;
+            var label = make('Label', row, '', 'PMSearchName');
+            label.text = (won ? T.won : T.lost) + '  ' +
+                PM.Text.int(match.player_kills) + '/' +
+                PM.Text.int(match.player_deaths) + '/' +
+                PM.Text.int(match.player_assists) + '  ' +
+                coreMins(match.match_duration_s);
+            var openButton = make('Button', row, '', 'PMSmallButton');
+            make('Label', openButton, '', 'PMSmallButtonLabel').text = T.searchMatchButton;
+            openButton.SetPanelEvent('onactivate', function () {
+                coreMatchLoad(match.match_id);
+            });
+        })(history[i]);
+    }
+}
+
+function coreMatchLoad(matchId) {
+    if (state.searchBusy || !PM.Api) { return; }
+    state.searchBusy = true;
+    coreSearchStatus(T.apiLoading);
+    PM.Api.matchSlim(matchId, function (matchErr, match) {
+        state.searchBusy = false;
+        if (matchErr || !match || match.error) {
+            coreSearchStatus(T.apiFail + (matchErr || match.error));
+            return;
+        }
+        state.searchMatch = match;
+        coreSearchStatus(T.foreignMatchTitle + ' ' + (match.match_id || ''));
+        coreMatchRender();
+        var heroId = null;
+        if (match.players && match.players.length) { heroId = match.players[0].hero_id; }
+        if (heroId !== null) { coreExtrasLoad(heroId); }
+    });
+}
+
+function coreMatchRender() {
+    var box = body('PMForeignBody');
+    if (!alive(box)) { return; }
+    clearChildren(box);
+    var match = state.searchMatch;
+    if (!match) { return; }
+    make('Label', box, '', 'PMBreakdownLine').text =
+        T.foreignMatchTitle + ' ' + (match.match_id || '') + '  ·  ' +
+        (match.game_mode || '') + '  ·  ' + coreMins(match.duration_s);
+    var players = (match.players || []).slice().sort(function (a, b) {
+        return (b.net_worth || 0) - (a.net_worth || 0);
+    });
+    make('Label', box, '', 'PMBreakdownLine').text = T.foreignPlayersNote + ':';
+    for (var i = 0; i < players.length && i < 6; i++) {
+        var p = players[i];
+        var row = make('Panel', box, '', 'PMSearchRow');
+        var label = make('Label', row, '', 'PMSearchName');
+        label.text = (p.name || '?') + '  ' +
+            PM.Text.int(p.kills) + '/' + PM.Text.int(p.deaths) + '/' +
+            PM.Text.int(p.assists);
+        var meta = make('Label', row, '', 'PMSearchMeta');
+        meta.text = PM.Text.f(p.net_worth, '');
+    }
+}
+
+function coreCardLoad(accountId) {
+    if (state.searchBusy || !PM.Api) { return; }
+    state.searchBusy = true;
+    coreSearchStatus(T.apiLoading);
+    PM.Api.playerSlim(accountId, function (cardErr, card) {
+        state.searchBusy = false;
+        if (cardErr || !card || card.error) {
+            coreSearchStatus(T.apiFail + (cardErr || (card && card.error) || '?'));
+            return;
+        }
+        state.searchCard = card;
+        coreSearchStatus(T.searchCardTitle + ': ' + (card.name || accountId));
+        coreCardRender();
+    });
+}
+
+function coreCardRender() {
+    var box = body('PMForeignBody');
+    if (!alive(box)) { return; }
+    clearChildren(box);
+    var card = state.searchCard;
+    if (!card) { return; }
+    make('Label', box, '', 'PMBreakdownLine').text =
+        (card.name || '?') + '  #' + (card.account_id || '');
+    var row = make('Panel', box, '', 'PMSearchRow');
+    make('Label', row, '', 'PMSearchName').text =
+        T.apiRankTitle + ': ' + (card.rank_tier === null ? T.notAvailable : (card.rank_tier + '/' + card.rank_subtier));
+    make('Label', row, '', 'PMSearchMeta').text =
+        (card.matches === null ? '' : (card.matches + ' к.')) +
+        (card.win_rate === null ? '' : ('  ' + Math.round(card.win_rate * 100) + '%'));
+}
+
+// Counters then items, strictly sequential (one bridge reply at a time).
+function coreExtrasLoad(heroId) {
+    if (!PM.Api) { return; }
+    var apiBox = body('PMApiBody');
+    if (alive(apiBox)) { clearChildren(apiBox); }
+    PM.Api.heroCounters(heroId, function (counterErr, counters) {
+        PM.Api.heroItems(heroId, function (itemErr, items) {
+            coreExtrasRender(counterErr, counters, itemErr, items);
+        });
+    });
+}
+
+function coreExtrasRender(counterErr, counters, itemErr, items) {
+    var apiBox = body('PMApiBody');
+    if (!alive(apiBox)) { return; }
+    clearChildren(apiBox);
+    make('Label', apiBox, '', 'PMBreakdownLine').text = T.apiCountersTitle + ':';
+    if (!counterErr && counters && counters.length) {
+        for (var i = 0; i < counters.length && i < 5; i++) {
+            var row = make('Panel', apiBox, '', 'PMSearchRow');
+            make('Label', row, '', 'PMSearchName').text = 'hero ' + counters[i].hero_id;
+            make('Label', row, '', 'PMSearchMeta').text =
+                (counters[i].win_rate === null ? '' : (Math.round(counters[i].win_rate * 100) + '%')) +
+                (counters[i].matches === null ? '' : ('  ' + counters[i].matches + ' к.'));
+        }
+    } else {
+        make('Label', apiBox, '', 'PMBreakdownLine').text =
+            T.apiFail + (counterErr || '?');
+    }
+    make('Label', apiBox, '', 'PMBreakdownLine').text = T.apiItemsTitle + ':';
+    if (!itemErr && items && items.length) {
+        for (var j = 0; j < items.length && j < 5; j++) {
+            var itemRow = make('Panel', apiBox, '', 'PMSearchRow');
+            make('Label', itemRow, '', 'PMSearchName').text = 'item ' + items[j].item_id;
+            make('Label', itemRow, '', 'PMSearchMeta').text =
+                (items[j].win_rate === null ? '' : (Math.round(items[j].win_rate * 100) + '%')) +
+                (items[j].matches === null ? '' : ('  ' + items[j].matches + ' к.'));
+        }
+    } else {
+        make('Label', apiBox, '', 'PMBreakdownLine').text =
+            T.apiFail + (itemErr || '?');
+    }
+}
+
 // ── diagnostics ───────────────────────────────────────────────────────────────────
 function runDiagnostics() {
     var out = state.diagOutput;
@@ -1050,7 +1341,8 @@ function boot() {
     }
     if (!PM.Data) { note('pm_data.js did not register'); }
 
-    var buttonId = host === 'post_game' ? 'PM_PostGameButton' : 'PM_ProfileButton';
+    var buttonId = host === 'post_game' ? 'PM_PostGameButton'
+        : (host === 'escape' ? 'PM_EscapeButton' : 'PM_ProfileButton');
     var button = (PM.Compat && PM.Compat.childById)
         ? PM.Compat.childById(context, buttonId) : null;
     if (!alive(button)) {

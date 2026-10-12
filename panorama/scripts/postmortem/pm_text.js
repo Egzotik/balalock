@@ -112,7 +112,33 @@ var TEXT = {
     wrongHeader: 'ПРОБЛЕМЫ С ДАННЫМИ (разбор выше построен без них)',
     wrongNone: 'ПРОБЛЕМ С ДАННЫМИ НЕТ - все поля на этом экране прочитаны',
 
-    footerNote: 'напечатано утром после'
+    footerNote: 'напечатано утром после',
+
+    // ── поиск и API ─────────────────────────────────────────────────────────────
+    searchTitle: 'Поиск игрока',
+    searchHint: 'Ник, SteamID64 или account ID. Чужие катки — из deadlock-api.com.',
+    searchButton: 'Найти',
+    searchRunning: 'Ищу... мост отвечает по частям, это занимает пару секунд.',
+    searchEmpty: 'Никого не найдено. Проверьте ник или ID.',
+    searchFail: 'Поиск не ответил: ',
+    searchFound: 'найдено',
+    searchMatchesButton: 'катки',
+    searchCardButton: 'карта',
+    searchHistoryTitle: 'Катки игрока',
+    searchMatchButton: 'матч',
+    searchNoApi: 'Мост не настроен: API недоступно, офлайн-разбор работает как раньше.',
+    searchNeedBridge: 'Настройте BRIDGE_URL в pm_net.js и задеплойте bridge/worker.js.',
+    searchCardTitle: 'Карточка',
+    searchBackButton: 'назад',
+    escHint: 'ESC-меню: работает прямо во время катки.',
+    apiCountersTitle: 'Контер-пики героя',
+    apiItemsTitle: 'Предметы героя по винрейту',
+    apiRankTitle: 'Ранг',
+    apiBoardTitle: 'Топ региона',
+    apiLoading: 'Гружу из API...',
+    apiFail: 'API не ответило: ',
+    foreignMatchTitle: 'Чужой матч',
+    foreignPlayersNote: 'топ-3 по нетворсу'
 };
 
 // ─────────────────────────────────────────────────────────────────────────────────

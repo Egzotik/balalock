@@ -2,10 +2,12 @@
 
 Экран разбора матча прямо в игре: farming, драки, объективы, itemization, сравнение с
 лобби и тоталы команд. Открывается по кнопке, а не встроен в интерфейс игры.
+Плюс поиск игроков по нику/SteamID и чужие катки через deadlock-api.com —
+из ESC-меню, прямо во время матча.
 
-**Статус: фаза 1 завершена, сборка работает. Требуется прогон в игре.**
+**Статус: сборка работает. Требуется прогон в игре (3 хоста, мост API).**
 
-Собранный аддон: `build/pak01_dir.vpk` (184 688 байт, 11 ассетов, проверено содержимым).
+Собранный аддон: `build/pak01_dir.vpk` (13 ассетов, проверено содержимым).
 
 ---
 
@@ -24,6 +26,7 @@
 |---|---|---|
 | Страница профиля, рядом с «View All» | `panorama/layout/citadel_db_page_profile.xml` | Список своих матчей + career-статы, выбор матча |
 | Пост-матч экран, рядом с REPLAY | `panorama/layout/post_game/citadel_db_page_post_game_new.xml` | Разбор открытого матча |
+| ESC-меню, в списке слева | `panorama/layout/hud_escape_menu.xml` | Поиск игроков и чужих каток прямо во время матча (только API, без табло) |
 
 Поток: **профиль → список матчей → «open» → игра сама открывает полное табло этого матча →
 наш второй хост показывает разбор.**
@@ -110,6 +113,26 @@ CEF-мост (`pm_net.js`) и пробник оставлены в сборке,
 больше не в критическом пути: он нужен только для Counter Buys и FAM в полном виде —
 двух вещей, которых в игре просто нет.
 
+## API (deadlock-api.com)
+
+Мост включён: `BRIDGE_URL` указывает на
+`https://balalock.egz0tikys99.workers.dev` (деплой — `bridge/README.md`,
+`wrangler deploy`). Деплой обязателен: без него поиск отвечает
+«bridge-not-configured», офлайн-разбор при этом работает как раньше.
+
+Что тянет `pm_api.js` (все ответы ужаты воркером в `/slim/*`, слайсы по 3500
+символов, строго по очереди):
+
+| Что | Откуда |
+|---|---|
+| Поиск по нику / SteamID / account ID | `steam-search`, `player/card` |
+| Чужие катки (10 последних) | `players/{id}/match-history` |
+| Чужой матч: режим, длительность, 12 игроков | `matches/{id}/metadata` |
+| Карточка игрока: матчи, винрейт, ранг | `players/{id}/card`, `players/{id}/rank` |
+| Контер-пики героя (топ-8) | `analytics/hero-counter-stats` |
+| Предметы героя по винрейту (топ-10) | `analytics/item-stats` |
+| Топ региона | `leaderboard/{region}` |
+
 ## Структура
 
 ```
@@ -117,15 +140,20 @@ panorama/
   layout/
     citadel_db_page_home.xml                     переопределение, вход A
     post_game/citadel_db_page_post_game_new.xml  переопределение, вход B
+    hud_escape_menu.xml                          переопределение, вход C (ESC)
   styles/postmortem/
     pm_button.vcss   стиль кнопок
     pm_root.vcss     стиль экрана
   scripts/postmortem/
     pm_compat.js     проверка совместимости с версией игры
     pm_data.js       чтение данных из нативных панелей игры
-    pm_net.js        мост в API через CEF-панель (выключен, не критичен)
+    pm_net.js        мост в API через CEF-панель (BRIDGE_URL = наш воркер)
+    pm_api.js        все вызовы deadlock-api.com: поиск, катки, матч, карта, контеры, предметы, топ
     pm_probe.js      диагностический пробник транспорта
     pm_core.js       контроллер экрана и рендер
+bridge/
+  worker.js          Cloudflare-воркер: bridge-страница + прокси + ужатые /slim/* ответы
+  wrangler.toml      конфиг деплоя (balalock.egz0tikys99.workers.dev)
 tools/
   build_mod.ps1             сборка
   check_js_namespace.py    линтер модулей (слот должен быть создан)
